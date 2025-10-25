@@ -7,7 +7,7 @@ from main import Group, Member, Suggestion, Poll, SQLModel
 import os
 from datetime import datetime, timezone
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/planmyoutings")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/planmyoutings")
 engine = create_engine(DATABASE_URL, echo=True)
 
 def seed_data():
@@ -277,7 +277,9 @@ def seed_data():
         print(f"Members: {len(members)}")
         print(f"Suggestions: {len(all_suggestions)}")
         print(f"Polls: 2")
-        print("\nAccess the group at: http://localhost:5173/g/GFRIEND1")
+        frontend_port = os.getenv("FRONTEND_PORT", "3000")
+        print(f"\nAccess the group at: http://localhost:{frontend_port}/g/{group.code}")
+
 
 if __name__ == "__main__":
     seed_data()
