@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.9"
 
 services:
   postgres:
@@ -19,11 +19,14 @@ services:
 
   api:
     build: .
+    working_dir: /app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
+      FRONTEND_PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/planmyoutings
-      BASE_URL: http://localhost:5173
+      BASE_URL: http://localhost:3000
       GOOGLE_PLACES_KEY: ${GOOGLE_PLACES_KEY:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       UNSPLASH_KEY: ${UNSPLASH_KEY:-}
