@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: planmyoutings
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/planmyoutings
+      BASE_URL: http://localhost:5173
+      GOOGLE_PLACES_KEY: ${GOOGLE_PLACES_KEY:-}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      UNSPLASH_KEY: ${UNSPLASH_KEY:-}
+      OPENAI_KEY: ${OPENAI_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
