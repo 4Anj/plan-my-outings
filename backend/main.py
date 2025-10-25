@@ -10,6 +10,7 @@ import string
 import httpx
 import hashlib
 from contextlib import asynccontextmanager
+from sqlalchemy.dialects.postgresql import JSONB  # Add this import
 
 # Database Models
 class Group(SQLModel, table=True):
@@ -41,7 +42,7 @@ class Suggestion(SQLModel, table=True):
     description: Optional[str] = None
     rating: Optional[float] = None
     price_estimate: Optional[int] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSONB"})
+    suggestion_metadata: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Poll(SQLModel, table=True):
@@ -49,8 +50,8 @@ class Poll(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="groups.id")
     title: str
-    options: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSONB"})
-    votes: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSONB"})
+    options: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
+    votes: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ChatMessage(SQLModel, table=True):
@@ -367,7 +368,7 @@ def get_group(code: str, session: Session = Depends(get_session)):
                 "description": s.description,
                 "rating": s.rating,
                 "price_estimate": s.price_estimate,
-                "metadata": s.metadata
+                "metadata": s.suggestion_metadata
             } for s in suggestions
         ],
         "polls": [
@@ -412,7 +413,7 @@ async def create_suggestions(
                 description=place.get("vicinity", ""),
                 rating=place.get("rating", 4.0),
                 price_estimate=map_price_level_to_inr(place.get("price_level")),
-                metadata={
+                suggestion_metadata={
                     "location": place.get("geometry", {}).get("location", {}),
                     "types": place.get("types", [])
                 }
@@ -431,7 +432,7 @@ async def create_suggestions(
                 description=movie.get("overview", ""),
                 rating=movie.get("vote_average", 7.0) / 2,  # Convert to 5-star
                 price_estimate=600,  # 2 tickets
-                metadata={
+                suggestion_metadata={
                     "poster_path": movie.get("poster_path"),
                     "release_date": movie.get("release_date")
                 }
@@ -469,7 +470,7 @@ def get_suggestions(code: str, session: Session = Depends(get_session)):
             "description": s.description,
             "rating": s.rating,
             "price_estimate": s.price_estimate,
-            "metadata": s.metadata
+            "metadata": s.suggestion_metadata
         } for s in suggestions
     ]
 
