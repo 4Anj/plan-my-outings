@@ -27,7 +27,7 @@ FastAPI backend for Plan My Outings group planning app.
 
 1. **Clone the repository**
 ```bash
-git clone <backend-repo-url>
+git clone https://github.com/4Anj/plan-my-outings
 cd plan-my-outings-backend
 ```
 
@@ -36,15 +36,14 @@ cd plan-my-outings-backend
 cp .env.sample .env
 ```
 
-Edit `.env` with your API keys (optional for MVP):
+Edit `.env` with your API keys:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/planmyoutings
 BASE_URL=http://localhost:5173
-GOOGLE_PLACES_KEY=your_key_here
-TMDB_API_KEY=your_key_here
-UNSPLASH_KEY=your_key_here
-OPENAI_KEY=your_key_here
-```
+GOOGLE_PLACES_KEY=key
+TMDB_API_KEY=key
+UNSPLASH_KEY=key
+OPENAI_KEY=key
 
 3. **Start services**
 ```bash
