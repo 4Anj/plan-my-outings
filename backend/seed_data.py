@@ -273,6 +273,8 @@ def seed_data():
         session.add(poll2)
         
         session.commit()
+
+        frontend_port = os.getenv("FRONTEND_PORT", "3000")
         
         print("\n✅ Seed data created successfully!")
         print(f"Group Code: {group.code}")
@@ -280,7 +282,7 @@ def seed_data():
         print(f"Members: {len(members)}")
         print(f"Suggestions: {len(all_suggestions)}")
         print(f"Polls: 2")
-        print(f"\nAccess the group at: http://localhost:5173/g/{group.code}")
+        print(f"\nAccess the group at: http://localhost:{frontend_port}/g/{group.code}")
 
 
 if __name__ == "__main__":
