@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Field, SQLModel, create_engine, Session, select, Relationship
+from sqlmodel import Field, SQLModel, create_engine, Session, select
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from pydantic import BaseModel
@@ -10,7 +12,6 @@ import string
 import httpx
 import hashlib
 from contextlib import asynccontextmanager
-from sqlalchemy.dialects.postgresql import JSONB  # Add this import
 
 # Database Models
 class Group(SQLModel, table=True):
@@ -36,13 +37,13 @@ class Suggestion(SQLModel, table=True):
     __tablename__ = "suggestions"
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="groups.id")
-    type: str  # 'place'|'movie'|'experience'
+    type: str
     source_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     rating: Optional[float] = None
     price_estimate: Optional[int] = None
-    suggestion_metadata: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
+    suggestion_metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Poll(SQLModel, table=True):
@@ -50,8 +51,8 @@ class Poll(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="groups.id")
     title: str
-    options: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
-    votes: Dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)  # Changed here
+    options: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    votes: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ChatMessage(SQLModel, table=True):
@@ -93,7 +94,7 @@ class BotQueryRequest(BaseModel):
 
 # Database Setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/planmyoutings")
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=False)  # Set to False for production
 
 def get_session():
     with Session(engine) as session:
@@ -101,21 +102,19 @@ def get_session():
 
 # Simple cache for API responses
 cache: Dict[str, tuple[Any, float]] = {}
-CACHE_TTL = 1800  # 30 minutes
+CACHE_TTL = 1800
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables
     SQLModel.metadata.create_all(engine)
     yield
-    # Cleanup if needed
 
 app = FastAPI(title="Plan My Outings API", lifespan=lifespan)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -141,7 +140,6 @@ def set_cache(key: str, data: Any):
     cache[key] = (data, datetime.now(timezone.utc).timestamp())
 
 async def fetch_google_places(mood: str, budget_level: str, lat: float = 12.9716, lng: float = 77.5946):
-    """Fetch places from Google Places API"""
     api_key = os.getenv("GOOGLE_PLACES_KEY")
     if not api_key:
         return get_mock_places(mood, budget_level)
@@ -151,7 +149,6 @@ async def fetch_google_places(mood: str, budget_level: str, lat: float = 12.9716
     if cached:
         return cached
     
-    # Map mood to place types
     type_map = {
         "adventurous": "tourist_attraction",
         "chill": "cafe",
@@ -183,7 +180,6 @@ async def fetch_google_places(mood: str, budget_level: str, lat: float = 12.9716
     return get_mock_places(mood, budget_level)
 
 async def fetch_tmdb_movies(mood: str):
-    """Fetch movies from TMDb API"""
     api_key = os.getenv("TMDB_API_KEY")
     if not api_key:
         return get_mock_movies(mood)
@@ -194,11 +190,11 @@ async def fetch_tmdb_movies(mood: str):
         return cached
     
     genre_map = {
-        "adventurous": 12,  # Adventure
-        "chill": 35,  # Comedy
-        "romantic": 10749,  # Romance
-        "foodie": 99,  # Documentary
-        "fun_getaway": 16  # Animation
+        "adventurous": 12,
+        "chill": 35,
+        "romantic": 10749,
+        "foodie": 99,
+        "fun_getaway": 16
     }
     genre_id = genre_map.get(mood, 28)
     
@@ -224,7 +220,6 @@ async def fetch_tmdb_movies(mood: str):
     return get_mock_movies(mood)
 
 def get_mock_places(mood: str, budget_level: str):
-    """Mock places data"""
     places = [
         {"name": "Cubbon Park", "rating": 4.5, "price_level": 0, "place_id": "mock_1"},
         {"name": "Wonderla", "rating": 4.3, "price_level": 3, "place_id": "mock_2"},
@@ -234,7 +229,6 @@ def get_mock_places(mood: str, budget_level: str):
     return places
 
 def get_mock_movies(mood: str):
-    """Mock movies data"""
     movies = [
         {"title": "Zindagi Na Milegi Dobara", "vote_average": 8.1, "id": 12345},
         {"title": "Dil Chahta Hai", "vote_average": 8.0, "id": 12346},
@@ -244,12 +238,10 @@ def get_mock_movies(mood: str):
     return movies
 
 def map_price_level_to_inr(price_level: Optional[int]) -> int:
-    """Map Google price_level to INR for 2 people"""
     mapping = {0: 300, 1: 700, 2: 1500, 3: 3000, 4: 4500}
     return mapping.get(price_level or 1, 1000)
 
 def calculate_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Calculate distance in km using Haversine formula"""
     from math import radians, sin, cos, sqrt, atan2
     R = 6371
     dlat = radians(lat2 - lat1)
@@ -259,7 +251,6 @@ def calculate_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
     return R * c
 
 def calculate_score(suggestion: Suggestion, group_budget: str, votes: int, max_votes: int, distance_km: float, max_distance: float) -> float:
-    """PlanPal scoring algorithm"""
     rating_norm = (suggestion.rating or 3.5) / 5.0
     
     budget_map = {"low": 1000, "medium": 2000, "high": 4000}
@@ -394,7 +385,6 @@ async def create_suggestions(
     
     members = session.exec(select(Member).where(Member.group_id == group.id)).all()
     
-    # Calculate centroid
     lats = [m.location_lat for m in members if m.location_lat]
     lngs = [m.location_lng for m in members if m.location_lng]
     centroid_lat = sum(lats) / len(lats) if lats else 12.9716
@@ -430,8 +420,8 @@ async def create_suggestions(
                 source_id=str(movie.get("id")),
                 title=movie.get("title", "Unknown Movie"),
                 description=movie.get("overview", ""),
-                rating=movie.get("vote_average", 7.0) / 2,  # Convert to 5-star
-                price_estimate=600,  # 2 tickets
+                rating=movie.get("vote_average", 7.0) / 2,
+                price_estimate=600,
                 suggestion_metadata={
                     "poster_path": movie.get("poster_path"),
                     "release_date": movie.get("release_date")
@@ -504,7 +494,7 @@ def vote_poll(code: str, poll_id: int, req: VoteRequest, session: Session = Depe
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
     
-    votes = poll.votes or {}
+    votes = dict(poll.votes) if poll.votes else {}
     option_id = req.option_id
     
     if option_id not in votes:
@@ -551,7 +541,6 @@ async def bot_query(req: BotQueryRequest, session: Session = Depends(get_session
     return {"reply": reply}
 
 async def handle_planpal_query(group_id: int, text: str, session: Session):
-    """Process PlanPal commands"""
     text_lower = text.lower()
     
     suggestions = session.exec(select(Suggestion).where(Suggestion.group_id == group_id)).all()
@@ -561,7 +550,6 @@ async def handle_planpal_query(group_id: int, text: str, session: Session):
     group = session.exec(select(Group).where(Group.id == group_id)).first()
     
     if "suggest" in text_lower:
-        # Calculate scores
         scored = []
         for s in suggestions:
             score = calculate_score(s, group.budget_level or "medium", 0, 1, 0, 10)
