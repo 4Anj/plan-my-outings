@@ -5,10 +5,9 @@ Run with: python seed_data.py
 from sqlmodel import Session, create_engine, select
 from main import Group, Member, Suggestion, Poll, SQLModel
 import os
-from datetime import datetime, timezone
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/planmyoutings")
-engine = create_engine(DATABASE_URL, echo=True)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/planmyoutings")
+engine = create_engine(DATABASE_URL, echo=False)
 
 def seed_data():
     # Create tables
@@ -17,10 +16,14 @@ def seed_data():
     with Session(engine) as session:
         # Clear existing data
         print("Clearing existing data...")
-        session.query(Poll).delete()
-        session.query(Suggestion).delete()
-        session.query(Member).delete()
-        session.query(Group).delete()
+        for poll in session.exec(select(Poll)).all():
+            session.delete(poll)
+        for suggestion in session.exec(select(Suggestion)).all():
+            session.delete(suggestion)
+        for member in session.exec(select(Member)).all():
+            session.delete(member)
+        for group in session.exec(select(Group)).all():
+            session.delete(group)
         session.commit()
         
         # Create demo group
@@ -35,14 +38,14 @@ def seed_data():
         session.commit()
         session.refresh(group)
         
-        # Create members with realistic Indian city coordinates
+        # Create members
         print("Creating members...")
         members_data = [
-            {"name": "Rahul", "lat": 12.9716, "lng": 77.5946},  # Bangalore
-            {"name": "Priya", "lat": 12.9352, "lng": 77.6245},  # Bangalore
-            {"name": "Amit", "lat": 17.3850, "lng": 78.4867},  # Hyderabad
-            {"name": "Sneha", "lat": 19.0760, "lng": 72.8777},  # Mumbai
-            {"name": "Vikram", "lat": 13.0827, "lng": 80.2707},  # Chennai
+            {"name": "Rahul", "lat": 12.9716, "lng": 77.5946},
+            {"name": "Priya", "lat": 12.9352, "lng": 77.6245},
+            {"name": "Amit", "lat": 17.3850, "lng": 78.4867},
+            {"name": "Sneha", "lat": 19.0760, "lng": 72.8777},
+            {"name": "Vikram", "lat": 13.0827, "lng": 80.2707},
         ]
         
         members = []
@@ -60,7 +63,7 @@ def seed_data():
         for m in members:
             session.refresh(m)
         
-        # Create suggestions (places)
+        # Create place suggestions
         print("Creating place suggestions...")
         places = [
             {
@@ -68,28 +71,28 @@ def seed_data():
                 "description": "Beautiful green space in the heart of the city",
                 "rating": 4.5,
                 "price_estimate": 300,
-                "metadata": {"image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800"}
+                "suggestion_metadata": {"image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800"}
             },
             {
                 "title": "Wonderla Amusement Park",
                 "description": "Thrilling rides and water park",
                 "rating": 4.3,
                 "price_estimate": 3000,
-                "metadata": {"image": "https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=800"}
+                "suggestion_metadata": {"image": "https://images.unsplash.com/photo-1594623930572-300a3011d9ae?w=800"}
             },
             {
                 "title": "Cafe Coffee Day MG Road",
                 "description": "Cozy cafe with great coffee",
                 "rating": 4.0,
                 "price_estimate": 700,
-                "metadata": {"image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800"}
+                "suggestion_metadata": {"image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800"}
             },
             {
                 "title": "Lalbagh Botanical Garden",
                 "description": "Historic botanical garden with diverse flora",
                 "rating": 4.6,
                 "price_estimate": 200,
-                "metadata": {"image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800"}
+                "suggestion_metadata": {"image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800"}
             }
         ]
         
@@ -102,7 +105,7 @@ def seed_data():
                 description=p["description"],
                 rating=p["rating"],
                 price_estimate=p["price_estimate"],
-                metadata=p["metadata"]
+                suggestion_metadata=p["suggestion_metadata"]
             )
             session.add(suggestion)
         
@@ -114,28 +117,28 @@ def seed_data():
                 "description": "Three friends on a road trip discover themselves",
                 "rating": 4.1,
                 "price_estimate": 600,
-                "metadata": {"poster": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800"}
+                "suggestion_metadata": {"poster": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800"}
             },
             {
                 "title": "Dil Chahta Hai",
                 "description": "Coming-of-age story of three friends",
                 "rating": 4.0,
                 "price_estimate": 600,
-                "metadata": {"poster": "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?w=800"}
+                "suggestion_metadata": {"poster": "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?w=800"}
             },
             {
                 "title": "Queen",
                 "description": "A woman goes on her honeymoon alone and finds herself",
                 "rating": 3.9,
                 "price_estimate": 600,
-                "metadata": {"poster": "https://images.unsplash.com/photo-1574267432644-f2f2f5e85f5d?w=800"}
+                "suggestion_metadata": {"poster": "https://images.unsplash.com/photo-1574267432644-f2f2f5e85f5d?w=800"}
             },
             {
                 "title": "3 Idiots",
                 "description": "Comedy-drama about engineering students",
                 "rating": 4.2,
                 "price_estimate": 600,
-                "metadata": {"poster": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800"}
+                "suggestion_metadata": {"poster": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800"}
             }
         ]
         
@@ -148,7 +151,7 @@ def seed_data():
                 description=m["description"],
                 rating=m["rating"],
                 price_estimate=m["price_estimate"],
-                metadata=m["metadata"]
+                suggestion_metadata=m["suggestion_metadata"]
             )
             session.add(suggestion)
         
@@ -160,7 +163,7 @@ def seed_data():
                 "description": "Help clean Marina Beach and protect marine life",
                 "rating": 4.7,
                 "price_estimate": 0,
-                "metadata": {
+                "suggestion_metadata": {
                     "time_commitment": "3 hours",
                     "perks": "Free lunch + certificate",
                     "image": "https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=800"
@@ -171,7 +174,7 @@ def seed_data():
                 "description": "Free guided tour of Old Bangalore architecture",
                 "rating": 4.4,
                 "price_estimate": 0,
-                "metadata": {
+                "suggestion_metadata": {
                     "time_commitment": "2 hours",
                     "perks": "Free guide + refreshments",
                     "image": "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800"
@@ -182,7 +185,7 @@ def seed_data():
                 "description": "Volunteer at local community kitchen",
                 "rating": 4.8,
                 "price_estimate": 0,
-                "metadata": {
+                "suggestion_metadata": {
                     "time_commitment": "4 hours",
                     "perks": "Free meals + community",
                     "image": "https://images.unsplash.com/photo-1593113646773-028c131a4cae?w=800"
@@ -193,7 +196,7 @@ def seed_data():
                 "description": "Free entry to local artist exhibitions",
                 "rating": 4.2,
                 "price_estimate": 0,
-                "metadata": {
+                "suggestion_metadata": {
                     "time_commitment": "1-3 hours",
                     "perks": "Meet artists + live music",
                     "image": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800"
@@ -210,7 +213,7 @@ def seed_data():
                 description=e["description"],
                 rating=e["rating"],
                 price_estimate=e["price_estimate"],
-                metadata=e["metadata"]
+                suggestion_metadata=e["suggestion_metadata"]
             )
             session.add(suggestion)
         
@@ -277,8 +280,7 @@ def seed_data():
         print(f"Members: {len(members)}")
         print(f"Suggestions: {len(all_suggestions)}")
         print(f"Polls: 2")
-        frontend_port = os.getenv("FRONTEND_PORT", "3000")
-        print(f"\nAccess the group at: http://localhost:{frontend_port}/g/{group.code}")
+        print(f"\nAccess the group at: http://localhost:5173/g/{group.code}")
 
 
 if __name__ == "__main__":
